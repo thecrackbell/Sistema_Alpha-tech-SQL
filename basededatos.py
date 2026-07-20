@@ -15,19 +15,20 @@ class GestorBD:
                 falla TEXT,
                 costo REAL,
                 estado TEXT NOT NULL,
-                fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                ruta_foto TEXT
             )
         ''')
         self.conn.commit()
 
-    def insertar_orden(self, cliente, dispositivo, falla, costo, estado):
-        self.cursor.execute("INSERT INTO ordenes (cliente, dispositivo, falla, costo, estado) VALUES (?, ?, ?, ?, ?)", 
-                            (cliente, dispositivo, falla, costo, estado))
+    def insertar_orden(self, cliente, dispositivo, falla, costo, estado, ruta_foto):
+        self.cursor.execute("INSERT INTO ordenes (cliente, dispositivo, falla, costo, estado, ruta_foto) VALUES (?, ?, ?, ?, ?, ?)", 
+                            (cliente, dispositivo, falla, costo, estado, ruta_foto))
         self.conn.commit()
     def obtener_todas(self):
        # Especificamos el orden exacto para que coincida con tu Treeview
         # Seleccionamos todas las columnas en el orden correcto
-        self.cursor.execute("SELECT id, cliente, dispositivo, falla, costo, estado, fecha FROM ordenes")
+        self.cursor.execute("SELECT id, cliente, dispositivo, falla, costo, estado, fecha, ruta_foto FROM ordenes")
         return self.cursor.fetchall()
 
     def modificar_estado(self, id_orden, nuevo_estado):
@@ -41,7 +42,7 @@ class GestorBD:
         query = f"%{termino}%"
         # Mismo orden que en obtener_todas
         self.cursor.execute("""
-            SELECT id, cliente, dispositivo, falla, costo, estado, fecha 
+            SELECT id, cliente, dispositivo, falla, costo, estado, fecha, ruta_foto 
             FROM ordenes 
             WHERE cliente LIKE ? OR dispositivo LIKE ?
         """, (query, query))
@@ -54,4 +55,26 @@ class GestorBD:
         # Traemos todo para generar el reporte completo
         self.cursor.execute("SELECT * FROM ordenes")
         return self.cursor.fetchall()
-    
+    def actualizar_orden(self, id_orden, cliente, dispositivo, falla, costo, estado, ruta_foto):
+        self.cursor.execute('''
+            UPDATE ordenes 
+            SET cliente = ?, dispositivo = ?, falla = ?, costo = ?, estado = ?, ruta_foto = ?
+            WHERE id = ?
+        ''', (cliente, dispositivo, falla, costo, estado, ruta_foto, id_orden))
+        self.conn.commit()
+    def obtener_total_recaudado_por_mes(self, mes, anio):
+        # Filtra por el mes y año actual
+        self.cursor.execute('''
+            SELECT SUM(costo) FROM ordenes 
+            WHERE strftime('%m', fecha) = ? AND strftime('%Y', fecha) = ?
+        ''', (mes, anio))
+        resultado = self.cursor.fetchone()[0]
+        return resultado if resultado else 0.0
+    def obtener_total_recaudado_por_fecha(self, fecha):
+        # 'fecha' debe venir en formato 'YYYY-MM-DD'
+        self.cursor.execute('''
+            SELECT SUM(costo) FROM ordenes 
+            WHERE DATE(fecha) = ?
+        ''', (fecha,))
+        resultado = self.cursor.fetchone()[0]
+        return resultado if resultado else 0.0
