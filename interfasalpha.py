@@ -14,37 +14,129 @@ from ttkbootstrap.constants import *
 class AlphaTechApp:
 
   def __init__(self, root):
-    self.root = root
-    self.root.title("Alpha Tech v5.0 - Profesional SQL")
-    self.root.geometry("750x650")
+      self.root = root
+      self.root.title("Alpha Tech v5.0 - Profesional SQL")
+      self.root.geometry("750x700")
 
-    self.sistema = GestorBD()  # Inicializamos la BD
+      self.sistema = GestorBD()  # Inicializamos la BD
 
-    self.main_frame = tb.Frame(self.root, padding=20)
-    self.main_frame.pack(fill=BOTH, expand=YES)
+      self.main_frame = tb.Frame(self.root, padding=20)
+      self.main_frame.pack(fill=BOTH, expand=YES)
 
-    tb.Label(
-        self.main_frame,
-        text="Panel de Gestión SQL",
-        font=("Helvetica", 18, "bold"),
-    ).pack(pady=10)
+      # --- 🎨 SELECTOR DE TEMA EN VIVO ---
+      frame_tema = tb.Frame(self.main_frame)
+      frame_tema.pack(fill="x", side="top", pady=(0, 5))
 
-    # Botones principales
-    self.crear_boton("Registrar Orden", self.abrir_registro)
-    self.crear_boton("Registrar Abono", self.registrar_abono)
-    self.crear_boton("Ver Reporte", self.mostrar_reporte)
-    self.crear_boton("Exportar Reporte (.CSV)", self.exportar_reporte)
-    self.crear_boton("Cierre Diario", self.realizar_cierre_caja)
-    self.crear_boton("Cierre Mensual", self.realizar_cierre_mensual)
-    self.crear_boton("Cerrar", self.cerrar_sistema)
+      self.combo_tema = tb.Combobox(
+          frame_tema,
+          values=self.root.style.theme_names(),
+          state="readonly",
+          width=12,
+      )
+      self.combo_tema.set(self.root.style.theme.name)
+      self.combo_tema.pack(side="right")
+      self.combo_tema.bind("<<ComboboxSelected>>", self.cambiar_tema)
 
-    self.configurar_tabla()
-    self.configurar_menu_contextual()
-    self.refrescar_tabla()
+      tb.Label(
+          frame_tema, text="Tema visual:", font=("Helvetica", 9, "bold")
+      ).pack(side="right", padx=5)
+
+      # --- 🖼️ LOGO ALPHA TECH EN ENCABEZADO E ÍCONO ---
+      try:
+        # Cargar y escalar el logo proporcionalmente
+        img_logo_raw = Image.open("alpha tech.jpg")  # Nombre de tu archivo de logo
+        ancho_deseado = 220
+        proporcion = ancho_deseado / float(img_logo_raw.size[0])
+        alto_deseado = int((float(img_logo_raw.size[1]) * float(proporcion)))
+
+        img_resized = img_logo_raw.resize(
+            (ancho_deseado, alto_deseado), Image.Resampling.LANCZOS
+        )
+        self.logo_tk = ImageTk.PhotoImage(img_resized)
+
+        # 1. Mostrar el logo en pantalla
+        lbl_logo = tb.Label(self.main_frame, image=self.logo_tk)
+        lbl_logo.pack(pady=(5, 10))
+
+        # 2. Asignar el logo como ícono de la ventana/barra de tareas
+        self.root.iconphoto(False, self.logo_tk)
+
+      except Exception:
+        # En caso de que no encuentre la imagen, muestra el título tradicional
+        tb.Label(
+            self.main_frame,
+            text="⚡ ALPHA TECH ⚡",
+            font=("Helvetica", 18, "bold"),
+        ).pack(pady=10)
+
+      # Botones principales
+      self.crear_boton("Registrar Orden", self.abrir_registro, estilo="success")
+      self.crear_boton("Registrar Abono", self.registrar_abono, estilo="success")
+      self.crear_boton("Ver Reporte", self.mostrar_reporte, estilo="info")
+      self.crear_boton(
+          "Exportar Reporte (.CSV)", self.exportar_reporte, estilo="info"
+      )
+      self.crear_boton(
+          "Cierre Diario", self.realizar_cierre_caja, estilo="danger"
+      )
+      self.crear_boton(
+          "Cierre Mensual", self.realizar_cierre_mensual, estilo="danger"
+      )
+      self.crear_boton("Cerrar", self.cerrar_sistema, estilo="secondary")
+
+      self.configurar_tabla()
+      self.configurar_menu_contextual()
+      self.refrescar_tabla()
+
+      # Pie de página (Footer)
+      tb.Label(
+          self.main_frame,
+          text="Alpha Tech • Servicio Técnico Especializado",
+          font=("Helvetica", 8, "italic"),
+          bootstyle="secondary",
+      ).pack(side="bottom", pady=(10, 0))
+  def cambiar_tema(self, event):
+      nuevo_tema = self.combo_tema.get()
+      self.root.style.theme_use(nuevo_tema)
 
   def configurar_tabla(self):
     self.search_entry = tb.Entry(self.main_frame, bootstyle="info")
     self.search_entry.pack(fill="x", pady=10)
+    # 🔘 BOTONES DE FILTRO RÁPIDO
+    frame_filtros = tb.Frame(self.main_frame)
+    frame_filtros.pack(fill="x", pady=(0, 10))
+
+    tb.Label(
+        frame_filtros, text="Filtrar estado:", font=("Helvetica", 9, "bold")
+    ).pack(side="left", padx=(0, 5))
+
+    tb.Button(
+        frame_filtros,
+        text="Todos",
+        bootstyle="secondary-outline",
+        command=lambda: self.filtrar_por_estado("Todos"),
+    ).pack(side="left", padx=2)
+
+    tb.Button(
+        frame_filtros,
+        text="En espera",
+        bootstyle="warning-outline",
+        command=lambda: self.filtrar_por_estado("En espera"),
+    ).pack(side="left", padx=2)
+
+    tb.Button(
+        frame_filtros,
+        text="Reparados",
+        bootstyle="success-outline",
+        command=lambda: self.filtrar_por_estado("Reparado"),
+    ).pack(side="left", padx=2)
+
+    tb.Button(
+        frame_filtros,
+        text="Entregados",
+        bootstyle="dark-outline",
+        command=lambda: self.filtrar_por_estado("Entregado"),
+    ).pack(side="left", padx=2)
     self.search_entry.bind("<KeyRelease>", self.filtrar_tabla)
 
     # Mapeo exacto de las columnas con los datos de SQL
@@ -65,18 +157,30 @@ class AlphaTechApp:
     )
 
     for col in columnas:
-      self.tree.heading(col, text=col)
-      self.tree.column(col, width=85, anchor="center")
+        self.tree.heading(col, text=col)
+        self.tree.column(col, width=85, anchor="center")
 
-    self.tree.pack(fill="both", expand=True, pady=10)
-    self.tree.bind("<Double-1>", lambda event: self.editar_orden())
+        self.tree.pack(fill="both", expand=True, pady=10)
+        self.tree.bind("<Double-1>", lambda event: self.editar_orden())
+
+      # 🎨 CONFIGURACIÓN DE COLORES POR ESTADO (Apto para temas oscuros y claros)
+        self.tree.tag_configure(
+          "En espera", background="#4a3b00", foreground="#ffe066"
+        )  # Amarillo / Naranja
+        self.tree.tag_configure(
+          "Reparado", background="#0d381e", foreground="#75f0a0"
+        )  # Verde destello
+        self.tree.tag_configure(
+          "Entregado", background="#2b2b2b", foreground="#888888"
+        )  # Gris tenue
 
   def refrescar_tabla(self):
     for i in self.tree.get_children():
       self.tree.delete(i)
     for fila in self.sistema.obtener_todas():
-      self.tree.insert("", "end", values=fila)
-
+        # Obtenemos el estado (posición 7) para asignar el color
+        estado = fila[7] if len(fila) > 7 else ""
+        self.tree.insert("", "end", values=fila, tags=(estado,))
   def actualizar_status(self, nuevo_estado):
     seleccion = self.tree.selection()
     if not seleccion:
@@ -85,6 +189,7 @@ class AlphaTechApp:
     id_orden = self.tree.item(seleccion[0], "values")[0]
     self.sistema.modificar_estado(id_orden, nuevo_estado)
     self.refrescar_tabla()
+  
 
   def eliminar_orden(self):
     seleccion = self.tree.selection()
@@ -197,23 +302,38 @@ class AlphaTechApp:
         top, text="Guardar", command=guardar, bootstyle="success"
     ).pack(pady=10)
 
-  def crear_boton(self, texto, comando):
-    tb.Button(
-        self.main_frame,
-        text=texto,
-        command=comando,
-        width=30,
-        bootstyle="info",
-    ).pack(pady=4)
+  def crear_boton(self, texto, comando, estilo="info"):
+      tb.Button(
+          self.main_frame,
+          text=texto,
+          command=comando,
+          width=30,
+          bootstyle=estilo,
+      ).pack(pady=4)
 
-  def filtrar_tabla(self, event):
+  def filtrar_tabla(self, event=None):
     query = self.search_entry.get()
     for i in self.tree.get_children():
-      self.tree.delete(i)
+        self.tree.delete(i)
 
     resultados = self.sistema.buscar_ordenes(query)
     for fila in resultados:
-      self.tree.insert("", "end", values=fila)
+        estado = fila[7] if len(fila) > 7 else ""
+        self.tree.insert("", "end", values=fila, tags=(estado,))
+        
+  def filtrar_por_estado(self, estado_filtro):
+      # Limpiamos la búsqueda manual si había texto
+      self.search_entry.delete(0, tk.END)
+
+      for i in self.tree.get_children():
+        self.tree.delete(i)
+
+      todas_las_ordenes = self.sistema.obtener_todas()
+
+      for fila in todas_las_ordenes:
+        estado = fila[7] if len(fila) > 7 else ""
+        if estado_filtro == "Todos" or estado == estado_filtro:
+          self.tree.insert("", "end", values=fila, tags=(estado,))
 
   def mostrar_reporte(self):
     datos = self.sistema.obtener_estadisticas()
@@ -693,7 +813,9 @@ class AlphaTechApp:
     entry_monto.bind("<KeyRelease>", calcular_conversion)
     entry_tasa.bind("<KeyRelease>", calcular_conversion)
     toggle_moneda()
-
+    
+    
+    
     def procesar_guardado():
       try:
         monto = float(entry_monto.get().replace(",", "."))
